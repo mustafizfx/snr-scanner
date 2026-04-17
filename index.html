@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#0a0a0f"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="SNR Scanner"/>
+<title>Malaysian SNR Scanner</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #0a0a0f;
+  --bg2:     #111118;
+  --bg3:     #1a1a24;
+  --bg4:     #22222f;
+  --border:  #2a2a3a;
+  --text:    #e8e8f0;
+  --muted:   #666680;
+  --dim:     #444458;
+  --gold:    #c9a84c;
+  --gold2:   #f0c060;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --amber:   #f59e0b;
+  --blue:    #3b82f6;
+  --mono:    'Share Tech Mono', monospace;
+  --sans:    'Barlow', sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+
+/* ── Layout ── */
+#app{display:flex;flex-direction:column;height:100%;padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
+#topbar{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+#nav{flex-shrink:0;display:flex;background:var(--bg2);border-bottom:1px solid var(--border)}
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#bottombar{flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;padding:6px 0 calc(6px + var(--safe-bot))}
+
+/* ── Top bar ── */
+.app-title{font-family:var(--mono);font-size:15px;color:var(--gold);letter-spacing:.08em}
+.app-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.live-badge{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 10px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.live-dot.red{background:var(--red)}
+.live-dot.amber{background:var(--amber)}
+.live-dot.off{animation:none;background:var(--dim)}
+
+/* ── Nav tabs ── */
+.nav-tab{flex:1;padding:10px 4px;text-align:center;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.04em;text-transform:uppercase}
+.nav-tab.active{color:var(--gold);border-color:var(--gold)}
+
+/* ── Pages ── */
+.page{display:none;padding:12px}
+.page.active{display:block}
+
+/* ── Pair selector ── */
+.pair-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.pair-btn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center;cursor:pointer;transition:all .15s;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.pair-btn.active{background:#1a160a;border-color:var(--gold);color:var(--gold)}
+
+/* ── Signal card ── */
+.signal-card{border-radius:12px;padding:14px 16px;margin-bottom:12px;border:1px solid var(--border)}
+.signal-card.buy{background:linear-gradient(135deg,#0a1f12 0%,#0d1a10 100%);border-color:#22c55e55}
+.signal-card.sell{background:linear-gradient(135deg,#1f0a0a 0%,#1a0d0d 100%);border-color:#ef444455}
+.signal-card.wait{background:linear-gradient(135deg,#1a150a 0%,#15110a 100%);border-color:#f59e0b55}
+.signal-card.none{background:var(--bg2);border-color:var(--border)}
+.signal-type{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:.06em;margin-bottom:6px}
+.signal-type.buy{color:var(--green)}
+.signal-type.sell{color:var(--red)}
+.signal-type.wait{color:var(--amber)}
+.signal-type.none{color:var(--muted)}
+.signal-reason{font-size:12px;color:var(--muted);line-height:1.6}
+.trade-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
+.t-box{background:var(--bg4);border-radius:8px;padding:8px;text-align:center}
+.t-lbl{font-size:10px;color:var(--dim);margin-bottom:2px;text-transform:uppercase;letter-spacing:.06em}
+.t-val{font-family:var(--mono);font-size:12px;font-weight:600}
+.t-val.e{color:var(--blue)}
+.t-val.s{color:var(--red)}
+.t-val.t{color:var(--green)}
+
+/* ── Price display ── */
+.price-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.price-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.price-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.price-val{font-family:var(--mono);font-size:20px;color:var(--text)}
+.price-val.bull{color:var(--green)}
+.price-val.bear{color:var(--red)}
+.price-sub{font-size:10px;color:var(--dim);margin-top:2px}
+
+/* ── SNR Table ── */
+.section-hd{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:12px 0 6px;padding-left:2px}
+.snr-list{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.snr-row{display:flex;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);gap:8px}
+.snr-row:last-child{border-bottom:none}
+.snr-row.current{background:#1a160a}
+.snr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.snr-info{flex:1;min-width:0}
+.snr-tf{font-size:10px;color:var(--muted);margin-bottom:1px}
+.snr-zone{font-family:var(--mono);font-size:12px;color:var(--text)}
+.snr-type{font-size:10px;color:var(--dim)}
+.snr-dist{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right}
+.fresh-tag{font-size:9px;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.fresh-tag.fresh{background:#0d1f10;color:var(--green)}
+.fresh-tag.unfresh{background:var(--bg4);color:var(--dim)}
+.price-marker{padding:6px 12px;background:#1a160a;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--gold);display:flex;align-items:center;gap:6px}
+
+/* ── Confluence ── */
+.conf-list{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.conf-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px}
+.conf-row:last-child{border-bottom:none}
+.chk{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.chk.ok{background:#0d1f10;color:var(--green)}
+.chk.no{background:#1f0a0a;color:var(--red)}
+.chk.partial{background:#1a150a;color:var(--amber)}
+.conf-score{background:var(--bg3);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.conf-bar{flex:1;height:6px;background:var(--bg4);border-radius:3px;margin:0 12px;overflow:hidden}
+.conf-fill{height:100%;border-radius:3px;transition:width .4s ease}
+
+/* ── Log ── */
+.log-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.log-entry{padding:8px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;display:flex;gap:8px}
+.log-entry:last-child{border-bottom:none}
+.log-ts{color:var(--dim);flex-shrink:0}
+.log-bull{color:var(--green)}
+.log-bear{color:var(--red)}
+.log-warn{color:var(--amber)}
+.log-none{color:var(--muted)}
+
+/* ── Bottom bar ── */
+.bb-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;font-size:10px;color:var(--muted);cursor:pointer;border:none;background:none;transition:color .15s;letter-spacing:.04em;text-transform:uppercase}
+.bb-btn.active{color:var(--gold)}
+.bb-icon{font-size:18px;line-height:1}
+
+/* ── Scan btn ── */
+.scan-fab{position:fixed;bottom:calc(70px + var(--safe-bot));right:16px;width:48px;height:48px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 20px rgba(201,168,76,.4);transition:transform .15s;z-index:99}
+.scan-fab:active{transform:scale(.92)}
+
+/* ── Settings ── */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-lbl{font-size:13px;color:var(--text)}
+.setting-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle{width:44px;height:24px;background:var(--bg4);border-radius:12px;position:relative;cursor:pointer;transition:background .2s;border:1px solid var(--border)}
+.toggle.on{background:var(--green)}
+.toggle-knob{width:18px;height:18px;background:white;border-radius:50%;position:absolute;top:2px;left:3px;transition:transform .2s}
+.toggle.on .toggle-knob{transform:translateX(20px)}
+select{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--sans)}
+.install-banner{background:linear-gradient(135deg,#1a160a,#12100a);border:1px solid var(--gold);border-radius:10px;padding:14px;margin-bottom:12px}
+.install-title{font-family:var(--mono);font-size:13px;color:var(--gold);margin-bottom:6px}
+.install-body{font-size:12px;color:var(--muted);line-height:1.7}
+.install-steps{margin-top:8px;padding-left:14px;font-size:12px;color:var(--text);line-height:2}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <div>
+      <div class="app-title">▸ SNR SCANNER</div>
+      <div class="app-sub">Malaysian Institutional System</div>
+    </div>
+    <div class="live-badge">
+      <span class="live-dot" id="live-dot"></span>
+      <span id="live-label">LIVE</span>
+    </div>
+  </div>
+
+  <!-- Nav tabs -->
+  <div id="nav">
+    <div class="nav-tab active" onclick="showPage('signal')">Signal</div>
+    <div class="nav-tab" onclick="showPage('levels')">Levels</div>
+    <div class="nav-tab" onclick="showPage('confluence')">Check</div>
+    <div class="nav-tab" onclick="showPage('log')">Log</div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- SIGNAL PAGE -->
+    <div class="page active" id="page-signal">
+      <div class="pair-grid" id="pair-grid"></div>
+
+      <div class="price-row">
+        <div class="price-card">
+          <div class="price-lbl">Price</div>
+          <div class="price-val" id="cur-price">—</div>
+          <div class="price-sub" id="price-change">Waiting...</div>
+        </div>
+        <div class="price-card">
+          <div class="price-lbl">HTF Bias</div>
+          <div class="price-val" id="htf-bias">—</div>
+          <div class="price-sub" id="storyline">—</div>
+        </div>
+      </div>
+
+      <div id="signal-card" class="signal-card none">
+        <div class="signal-type none" id="signal-type">SCANNING...</div>
+        <div class="signal-reason" id="signal-reason">Initializing SNR engine...</div>
+        <div class="trade-grid" id="trade-grid" style="display:none">
+          <div class="t-box"><div class="t-lbl">Entry</div><div class="t-val e" id="t-entry">—</div></div>
+          <div class="t-box"><div class="t-lbl">Stop Loss</div><div class="t-val s" id="t-sl">—</div></div>
+          <div class="t-box"><div class="t-lbl">Take Profit</div><div class="t-val t" id="t-tp">—</div></div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);text-align:center;padding:4px 0">
+        Next scan: <span id="next-scan" style="font-family:var(--mono);color:var(--gold)">30s</span>
+      </div>
+    </div>
+
+    <!-- LEVELS PAGE -->
+    <div class="page" id="page-levels">
+      <div class="section-hd">HTF SNR Map — <span id="pair-label-levels">XAUUSD</span></div>
+      <div class="snr-list" id="snr-list"></div>
+      <div class="section-hd">Nearest Levels</div>
+      <div class="price-row">
+        <div class="price-card">
+          <div class="price-lbl">Nearest Support</div>
+          <div class="price-val bull" id="near-sup" style="font-size:13px">—</div>
+          <div class="price-sub" id="near-sup-type">—</div>
+        </div>
+        <div class="price-card">
+          <div class="price-lbl">Nearest Resistance</div>
+          <div class="price-val bear" id="near-res" style="font-size:13px">—</div>
+          <div class="price-sub" id="near-res-type">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFLUENCE PAGE -->
+    <div class="page" id="page-confluence">
+      <div class="section-hd">Confluence Score</div>
+      <div class="conf-score">
+        <span style="font-family:var(--mono);font-size:13px;color:var(--text)" id="score-text">0/6</span>
+        <div class="conf-bar"><div class="conf-fill" id="conf-fill" style="width:0%"></div></div>
+        <span id="score-badge" style="font-size:11px;font-weight:600;color:var(--muted)">WEAK</span>
+      </div>
+      <div class="section-hd">Checklist</div>
+      <div class="conf-list" id="conf-list"></div>
+    </div>
+
+    <!-- LOG PAGE -->
+    <div class="page" id="page-log">
+      <div class="section-hd">Scan History</div>
+      <div class="log-wrap" id="log-wrap">
+        <div class="log-entry"><span class="log-ts">--:--:--</span><span class="log-none">Waiting for first scan...</span></div>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+
+  </div>
+
+  <!-- Bottom nav -->
+  <div id="bottombar">
+    <button class="bb-btn active" onclick="showPage('signal')" id="bb-signal">
+      <span class="bb-icon">◉</span>Signal
+    </button>
+    <button class="bb-btn" onclick="showPage('levels')" id="bb-levels">
+      <span class="bb-icon">≡</span>Levels
+    </button>
+    <button class="bb-btn" onclick="showPage('confluence')" id="bb-confluence">
+      <span class="bb-icon">✓</span>Check
+    </button>
+    <button class="bb-btn" onclick="showPage('log')" id="bb-log">
+      <span class="bb-icon">▤</span>Log
+    </button>
+  </div>
+
+</div>
+
+<!-- Scan FAB -->
+<button class="scan-fab" onclick="runScan()" title="Force Scan">▶</button>
+
+<script>
+// ── SNR Data ──────────────────────────────────────────────────────────────
+const PAIRS = {
+  XAUUSD: {
+    base:4813, vol:18,
+    bias:'Bullish', storyline:'MRM Running',
+    breakout:'Internal BKO confirmed 4,700',
+    supports:[
+      {zone:'4,760–4,780',mid:4770,type:'Classic V',tf:'Daily',fresh:true},
+      {zone:'4,700–4,750',mid:4725,type:'RBS',tf:'Weekly',fresh:true},
+      {zone:'4,620–4,650',mid:4635,type:'Classic V',tf:'Monthly',fresh:true},
+    ],
+    resistances:[
+      {zone:'4,820–4,840',mid:4830,type:'Classic A',tf:'Daily',fresh:true},
+      {zone:'4,836–4,882',mid:4860,type:'Classic A',tf:'Weekly',fresh:true},
+      {zone:'5,120–5,220',mid:5170,type:'Classic A',tf:'Monthly',fresh:false},
+    ],
+  },
+  EURUSD: {
+    base:1.1340, vol:0.0035,
+    bias:'Bullish', storyline:'WRW Running',
+    breakout:'Internal BKO confirmed 1.1250',
+    supports:[
+      {zone:'1.1290–1.1310',mid:1.1300,type:'Classic V',tf:'Daily',fresh:true},
+      {zone:'1.1220–1.1250',mid:1.1235,type:'RBS',tf:'Weekly',fresh:true},
+      {zone:'1.1100–1.1130',mid:1.1115,type:'Classic V',tf:'Monthly',fresh:true},
+    ],
+    resistances:[
+      {zone:'1.1380–1.1400',mid:1.1390,type:'Classic A',tf:'Daily',fresh:true},
+      {zone:'1.1440–1.1470',mid:1.1455,type:'Classic A',tf:'Weekly',fresh:true},
+      {zone:'1.1550–1.1600',mid:1.1575,type:'Classic A',tf:'Monthly',fresh:false},
+    ],
+  },
+  GBPUSD: {
+    base:1.3240, vol:0.0045,
+    bias:'Bullish', storyline:'DRD Running',
+    breakout:'Internal BKO confirmed 1.3130',
+    supports:[
+      {zone:'1.3180–1.3200',mid:1.3190,type:'Classic V',tf:'Daily',fresh:true},
+      {zone:'1.3100–1.3130',mid:1.3115,type:'RBS',tf:'Weekly',fresh:true},
+      {zone:'1.2980–1.3010',mid:1.2995,type:'Classic V',tf:'Monthly',fresh:true},
+    ],
+    resistances:[
+      {zone:'1.3280–1.3300',mid:1.3290,type:'Classic A',tf:'Daily',fresh:true},
+      {zone:'1.3350–1.3380',mid:1.3365,type:'Classic A',tf:'Weekly',fresh:true},
+      {zone:'1.3500–1.3550',mid:1.3525,type:'Classic A',tf:'Monthly',fresh:false},
+    ],
+  },
+  USDJPY: {
+    base:142.50, vol:0.55,
+    bias:'Bearish', storyline:'MRM Running (Bearish)',
+    breakout:'Internal BKO confirmed 141.60',
+    supports:[
+      {zone:'141.20–141.60',mid:141.40,type:'Classic V',tf:'Daily',fresh:true},
+      {zone:'139.80–140.20',mid:140.00,type:'RBS',tf:'Weekly',fresh:true},
+      {zone:'137.50–138.00',mid:137.75,type:'Classic V',tf:'Monthly',fresh:true},
+    ],
+    resistances:[
+      {zone:'143.20–143.60',mid:143.40,type:'Classic A',tf:'Daily',fresh:true},
+      {zone:'144.50–145.00',mid:144.75,type:'Classic A',tf:'Weekly',fresh:true},
+      {zone:'147.00–148.00',mid:147.50,type:'Classic A',tf:'Monthly',fresh:false},
+    ],
+  },
+};
+
+// ── State ─────────────────────────────────────────────────────────────────
+let currentPair = 'XAUUSD';
+let prevPrice = 0;
+let currentPrice = 0;
+let countdown = 30;
+let countdownTimer;
+let scanHistory = [];
+let settings = {sound: false, vibrate: true, interval: 30};
+
+// ── Init pair buttons ─────────────────────────────────────────────────────
+function initPairGrid() {
+  const g = document.getElementById('pair-grid');
+  g.innerHTML = Object.keys(PAIRS).map(p =>
+    `<div class="pair-btn${p===currentPair?' active':''}" id="pbtn-${p}" onclick="setPair('${p}')">${p}</div>`
+  ).join('');
+}
+
+function setPair(pair) {
+  currentPair = pair;
+  document.querySelectorAll('.pair-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pbtn-'+pair).classList.add('active');
+  document.getElementById('pair-label-levels').textContent = pair;
+  runScan();
+}
+
+// ── Formatting ────────────────────────────────────────────────────────────
+function fmt(v) {
+  if (v >= 1000) return v.toLocaleString('en-US',{maximumFractionDigits:0});
+  if (v >= 10)   return v.toFixed(2);
+  return v.toFixed(4);
+}
+function pct(a,b){ return Math.abs(((b-a)/a)*100).toFixed(2); }
+function distStr(price, mid) {
+  const p = pct(price, mid);
+  if (price >= 100) return fmt(Math.abs(price-mid))+' pts ('+p+'%)';
+  return Math.abs(price-mid).toFixed(4)+' ('+p+'%)';
+}
+function now() {
+  const d = new Date();
+  return [d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>x.toString().padStart(2,'0')).join(':');
+}
+
+// ── Signal classifier ─────────────────────────────────────────────────────
+function classify(price, p) {
+  const allLvls = [
+    ...p.supports.map(s=>({...s,dir:'support'})),
+    ...p.resistances.map(r=>({...r,dir:'resistance'})),
+  ];
+  allLvls.sort((a,b)=>a.mid-b.mid);
+
+  let nearSup = null, nearRes = null;
+  for (const l of allLvls) {
+    if (l.dir==='support'    && l.mid < price) nearSup = l;
+    if (l.dir==='resistance' && l.mid > price && !nearRes) nearRes = l;
+  }
+
+  const supPct = nearSup ? pct(price, nearSup.mid)*1 : Infinity;
+  const resPct = nearRes ? pct(price, nearRes.mid)*1 : Infinity;
+  const bullBias = p.bias === 'Bullish';
+
+  let sig='NONE', cls='none', conf=0, entry='—', sl='—', tp='—', reason='';
+
+  if (nearSup && nearSup.fresh && supPct < 0.6) {
+    sig='BUY'; cls='buy';
+    conf = supPct < 0.25 ? 90 : 70;
+    entry = nearSup.zone;
+    sl  = fmt(nearSup.mid * (price>=100 ? 0.9944 : 0.9960));
+    tp  = nearRes ? nearRes.zone : '—';
+    reason = `${nearSup.tf} ${nearSup.type} support zone reached (${supPct.toFixed(2)}% away). Storyline: ${p.storyline}. ${p.breakout}. Entry: Rejection or MISS. SL below zone body.`;
+  } else if (nearRes && nearRes.fresh && resPct < 0.6 && !bullBias) {
+    sig='SELL'; cls='sell';
+    conf = resPct < 0.25 ? 85 : 65;
+    entry = nearRes.zone;
+    sl  = fmt(nearRes.mid * (price>=100 ? 1.0055 : 1.0040));
+    tp  = nearSup ? nearSup.zone : '—';
+    reason = `${nearRes.tf} ${nearRes.type} resistance zone reached (${resPct.toFixed(2)}% away). Storyline: ${p.storyline}. Roadblock sell. Entry: Rejection required.`;
+  } else if (nearRes && nearRes.fresh && resPct < 0.6 && bullBias) {
+    sig='WAIT'; cls='wait';
+    conf = 40;
+    entry = nearRes.zone;
+    sl  = fmt(nearRes.mid * 1.0055);
+    tp  = nearSup ? nearSup.zone : '—';
+    reason = `${nearRes.tf} resistance zone nearby. HTF bias is BULLISH — only take sell as roadblock with strong rejection confirmation. Wait for candle body close below zone.`;
+  } else {
+    sig='NO SETUP'; cls='none'; conf=0;
+    reason = `Price floating between SNR levels. Nearest support: ${nearSup?nearSup.zone:'—'}. Nearest resistance: ${nearRes?nearRes.zone:'—'}. Wait for price to reach a fresh SNR zone before entry.`;
+  }
+
+  return {sig,cls,conf,entry,sl,tp,reason,nearSup,nearRes,supPct,resPct,allLvls};
+}
+
+function confluence(price, p, result) {
+  const bullBias = p.bias==='Bullish';
+  return [
+    {lbl:'HTF Bias aligned with signal',
+     ok: result.sig==='BUY' ? bullBias : result.sig==='SELL' ? !bullBias : null},
+    {lbl:'Fresh SNR zone identified',
+     ok: result.sig!=='NO SETUP' && result.sig!=='WAIT'},
+    {lbl:'Storyline is running',
+     ok: p.storyline.includes('Running')},
+    {lbl:'LTF Breakout confirmed',
+     ok: p.breakout.includes('confirmed')},
+    {lbl:'Price at SNR level',
+     ok: result.sig==='BUY' || result.sig==='SELL'},
+    {lbl:'Rejection / MISS signal',
+     ok: result.conf>70 ? true : result.conf>40 ? null : false},
+  ];
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderSignal(result, p) {
+  // Price
+  const priceEl = document.getElementById('cur-price');
+  priceEl.textContent = fmt(currentPrice);
+  priceEl.className = 'price-val ' + (prevPrice ? (currentPrice>prevPrice?'bull':'bear') : '');
+  const chg = prevPrice ? ((currentPrice-prevPrice)/prevPrice*100).toFixed(3) : '0.000';
+  document.getElementById('price-change').textContent = (prevPrice&&currentPrice>prevPrice?'+':'')+chg+'%';
+  document.getElementById('htf-bias').textContent = p.bias;
+  document.getElementById('htf-bias').className = 'price-val '+(p.bias==='Bullish'?'bull':'bear');
+  document.getElementById('storyline').textContent = p.storyline;
+
+  // Signal card
+  const card = document.getElementById('signal-card');
+  card.className = 'signal-card '+result.cls;
+  const typeEl = document.getElementById('signal-type');
+  typeEl.className = 'signal-type '+result.cls;
+  const labels = {BUY:'▲ BUY SIGNAL',SELL:'▼ SELL SIGNAL',WAIT:'⚠ WAIT — CONFIRM',NONE:'— NO VALID SETUP'};
+  typeEl.textContent = labels[result.sig] || '— NO VALID SETUP';
+  document.getElementById('signal-reason').textContent = result.reason;
+  const tg = document.getElementById('trade-grid');
+  if (result.sig==='BUY'||result.sig==='SELL') {
+    tg.style.display='grid';
+    document.getElementById('t-entry').textContent = result.entry;
+    document.getElementById('t-sl').textContent    = result.sl;
+    document.getElementById('t-tp').textContent    = result.tp;
+  } else {
+    tg.style.display='none';
+  }
+
+  // Live dot
+  const dot = document.getElementById('live-dot');
+  const lbl = document.getElementById('live-label');
+  dot.className = 'live-dot'+(result.sig==='BUY'?'':result.sig==='SELL'?' red':result.sig==='WAIT'?' amber':' off');
+  lbl.textContent = result.sig==='NO SETUP'?'IDLE':result.sig==='WAIT'?'WAIT':'SIGNAL!';
+}
+
+function renderLevels(result, p) {
+  const list = document.getElementById('snr-list');
+  const allLvls = [...result.allLvls].sort((a,b)=>b.mid-a.mid);
+  let html = '';
+  let priceInserted = false;
+  for (const l of allLvls) {
+    if (!priceInserted && l.mid < currentPrice) {
+      html += `<div class="price-marker">▶ PRICE: ${fmt(currentPrice)}</div>`;
+      priceInserted = true;
+    }
+    const isRes = l.dir==='resistance';
+    const color = isRes?'#ef4444':'#22c55e';
+    html += `<div class="snr-row">
+      <span class="snr-dot" style="background:${color};opacity:${l.fresh?1:.35}"></span>
+      <div class="snr-info">
+        <div class="snr-tf">${isRes?'R':'S'} · ${l.tf}</div>
+        <div class="snr-zone">${l.zone}</div>
+        <div class="snr-type">${l.type}</div>
+      </div>
+      <span class="fresh-tag ${l.fresh?'fresh':'unfresh'}">${l.fresh?'FRESH':'OLD'}</span>
+      <div class="snr-dist">${distStr(currentPrice,l.mid)}</div>
+    </div>`;
+  }
+  if (!priceInserted) html += `<div class="price-marker">▶ PRICE: ${fmt(currentPrice)}</div>`;
+  list.innerHTML = html;
+
+  if (result.nearSup) {
+    document.getElementById('near-sup').textContent = result.nearSup.zone;
+    document.getElementById('near-sup-type').textContent = result.nearSup.tf+' · '+result.nearSup.type;
+  }
+  if (result.nearRes) {
+    document.getElementById('near-res').textContent = result.nearRes.zone;
+    document.getElementById('near-res-type').textContent = result.nearRes.tf+' · '+result.nearRes.type;
+  }
+}
+
+function renderConfluence(result, p) {
+  const items = confluence(currentPrice, p, result);
+  const score = items.filter(i=>i.ok===true).length;
+  const pct2 = (score/items.length*100).toFixed(0);
+  const color = score>=5?'var(--green)':score>=3?'var(--amber)':'var(--red)';
+  const grade = score>=5?'STRONG':score>=3?'NORMAL':'WEAK';
+
+  document.getElementById('score-text').textContent = score+'/'+items.length;
+  const fill = document.getElementById('conf-fill');
+  fill.style.width = pct2+'%';
+  fill.style.background = color;
+  const badge = document.getElementById('score-badge');
+  badge.textContent = grade;
+  badge.style.color = color;
+
+  document.getElementById('conf-list').innerHTML = items.map(i=>`
+    <div class="conf-row">
+      <span class="chk ${i.ok===true?'ok':i.ok===null?'partial':'no'}">${i.ok===true?'✓':i.ok===null?'~':'✗'}</span>
+      <span>${i.lbl}</span>
+    </div>
+  `).join('');
+}
+
+function renderLog(result) {
+  const wrap = document.getElementById('log-wrap');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const cls = result.sig==='BUY'?'log-bull':result.sig==='SELL'?'log-bear':result.sig==='WAIT'?'log-warn':'log-none';
+  entry.innerHTML = `<span class="log-ts">${now()}</span><span class="${cls}">${currentPair} ${fmt(currentPrice)} → ${result.sig}</span>`;
+  if (wrap.children.length===1 && wrap.children[0].querySelector('.log-none')) wrap.innerHTML='';
+  wrap.prepend(entry);
+  if (wrap.children.length>40) wrap.removeChild(wrap.lastChild);
+}
+
+// ── Scan ──────────────────────────────────────────────────────────────────
+function runScan() {
+  const p = PAIRS[currentPair];
+  prevPrice = currentPrice || p.base;
+  currentPrice = +(p.base + (Math.random()-.5)*2*p.vol).toFixed(p.base>=100?2:4);
+
+  const result = classify(currentPrice, p);
+  renderSignal(result, p);
+  renderLevels(result, p);
+  renderConfluence(result, p);
+  renderLog(result);
+
+  if (settings.vibrate && navigator.vibrate && (result.sig==='BUY'||result.sig==='SELL')) {
+    navigator.vibrate([100,50,100]);
+  }
+
+  resetCountdown();
+}
+
+function resetCountdown() {
+  clearInterval(countdownTimer);
+  countdown = settings.interval;
+  document.getElementById('next-scan').textContent = countdown+'s';
+  countdownTimer = setInterval(()=>{
+    countdown--;
+    document.getElementById('next-scan').textContent = countdown+'s';
+    if (countdown<=0) runScan();
+  },1000);
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────
+const pages = ['signal','levels','confluence','log'];
+function showPage(id) {
+  pages.forEach(p=>{
+    document.getElementById('page-'+p).classList.toggle('active', p===id);
+    document.getElementById('bb-'+p).classList.toggle('active', p===id);
+    // nav tabs
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs[pages.indexOf('signal')].classList.toggle('active',id==='signal');
+    tabs[pages.indexOf('levels')].classList.toggle('active',id==='levels');
+    tabs[pages.indexOf('confluence')].classList.toggle('active',id==='confluence');
+    tabs[pages.indexOf('log')].classList.toggle('active',id==='log');
+  });
+}
+
+// ── Service Worker ────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+initPairGrid();
+runScan();
+</script>
+</body>
+</html>
